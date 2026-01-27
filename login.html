@@ -106,7 +106,8 @@ sessionStorage.clear();
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2AZm7c-AYI2FiM926hvbr4QSpW_CBpIwv8xP0DRJbse6Zb/exec";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2AZm7c-AYI2FiM926hvbr4QSpW_CBpIwv8xP0DRJbse6Zb/exec";
 
 function login() {
   const btn = document.getElementById("btnLogin");
@@ -116,6 +117,7 @@ function login() {
 
   fetch(API_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },   // ✅ IMPORTANTE
     body: JSON.stringify({
       acao: "login",
       usuario: usuario.value.trim(),
@@ -125,8 +127,14 @@ function login() {
   .then(r => r.json())
   .then(d => {
     if (d.status === "ok") {
+
+      // 🔑 SALVA TOKEN E USUÁRIO (CRÍTICO)
       sessionStorage.setItem("token", d.token);
+      sessionStorage.setItem("usuario", d.usuario);
+
+      // 🚀 REDIRECIONA
       window.location.href = "index.html";
+
     } else {
       alert("Login inválido");
       resetBtn();
