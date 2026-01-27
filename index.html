@@ -150,9 +150,11 @@ fetch(AUTH_API, {
 .catch(logout);
 
 function logout() {
+  sessionStorage.setItem("logout", "1");
   sessionStorage.clear();
   window.location.href = "login.html";
 }
+
 </script>
 
 <!-- PRESTAÇÃO DE CONTAS -->
