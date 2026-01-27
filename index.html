@@ -1,14 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-
-<!-- BLOQUEIO IMEDIATO -->
-<script>
-if (!sessionStorage.getItem("token")) {
-  window.location.replace("login.html");
-}
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prestação de Contas - Linhas Metropolitanas</title>
@@ -105,21 +97,29 @@ th { background: #eee; }
   </table>
 </section>
 
-<!-- VALIDA TOKEN -->
+<!-- 🔐 VALIDA TOKEN (FORMA CORRETA) -->
 <script>
 const AUTH_API =
   "https://script.google.com/macros/s/AKfycbwNLew3HAVIDmJh6yM-GX9ki-EH4GOmwu1913czT-PvQa6wzlAg4_Bvn0kOhlmOyhc/exec";
 
+const token = sessionStorage.getItem("token");
+
+// Se não existir token, sai
+if (!token) {
+  window.location.href = "login.html";
+}
+
 const authForm = new FormData();
 authForm.append("acao", "validar");
-authForm.append("token", sessionStorage.getItem("token"));
+authForm.append("token", token);
 
 fetch(AUTH_API, {
   method: "POST",
   body: authForm
 })
-.then(r => r.json())
-.then(d => {
+.then(r => r.text())
+.then(t => {
+  const d = JSON.parse(t);
   if (d.status !== "ok") logout();
 })
 .catch(() => logout());
@@ -130,7 +130,7 @@ function logout() {
 }
 </script>
 
-<!-- PRESTAÇÃO -->
+<!-- 📄 PRESTAÇÃO DE CONTAS -->
 <script>
 const URL_PRESTACAO =
   "https://script.google.com/macros/s/AKfycbxl0sD2be2zP5aLRXReLnkJFrEkzo-mEiJGHxkoH0Q3Qqxq76yphI0e94VktuZNf9H8/exec";
@@ -178,17 +178,14 @@ async function buscarPrestacoes() {
         </td>
         <td>${d.responsavel || "-"}</td>
         <td>
-          ${
-            d.status === "Pendente"
-              ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
-              : "-"
-          }
+          ${d.status === "Pendente"
+            ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
+            : "-"}
         </td>
       </tr>
     `;
   });
 }
-
 
 async function darBaixa(linha) {
   if (!confirm("Confirma dar baixa nesta prestação?")) return;
