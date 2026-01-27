@@ -131,9 +131,15 @@ th {
   </table>
 </section>
 
-<!-- AUTENTICAÇÃO -->
+<!-- AUTENTICAÇÃO (CORRIGIDA) -->
 <script>
-const AUTH_API = "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2AZm7c-AYI2FiM926hvbr4QSpW_CBpIwv8xP0DRJbse6Zb/exec";
+/*
+  ⚠️ IMPORTANTE
+  A validação do token DEVE ser feita
+  no MESMO Apps Script que cria o token (LOGIN).
+*/
+const AUTH_API =
+  "https://script.google.com/macros/s/AKfycbwNLew3HAVIDmJh6yM-GX9ki-EH4GOmwu1913czT-PvQa6wzlAg4_Bvn0kOhlmOyhc/exec";
 
 fetch(AUTH_API, {
   method: "POST",
