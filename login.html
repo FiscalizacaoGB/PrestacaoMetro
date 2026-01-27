@@ -96,34 +96,46 @@ button:hover:not(.loading) {
 const API_URL =
   "https://script.google.com/macros/s/AKfycbz1Vbr1SYPLFh8mzCQzpQ1aTaUt_TfXrcrLY20y_6fqFc7rTVxEk9HMuAr407uS-NcY/exec";
 
-function processarLogin(usuario, senha) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA);
-  const rows = sheet.getDataRange().getValues();
+function login() {
+  const btn = document.getElementById("btnLogin");
+  btn.innerText = "Entrando...";
+  btn.classList.add("loading");
+  btn.disabled = true;
 
-  for (let i = 1; i < rows.length; i++) {
-    if (
-      String(rows[i][0]).trim().toLowerCase() ===
-      String(usuario).trim().toLowerCase()
-    ) {
+  const usuario = document.getElementById("usuario").value.trim();
+  const senha = document.getElementById("senha").value;
 
-      const hashSalvo = String(rows[i][1]).trim();
-      const hashDigitado = gerarHash(senha);
-
-      if (hashDigitado === hashSalvo) {
-        const token = Utilities.getUuid();
-
-        CacheService.getScriptCache().put(token, usuario, SESSION_TIME);
-
-        return resposta({
-          status: "ok",
-          token: token,
-          usuario: usuario
-        });
-      }
-    }
+  if (!usuario || !senha) {
+    alert("Informe usuário e senha");
+    resetBtn();
+    return;
   }
 
-  return resposta({ status: "erro" });
+  const formData = new FormData();
+  formData.append("acao", "login");
+  formData.append("usuario", usuario);
+  formData.append("senha", senha);
+
+  fetch(API_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status === "ok") {
+      sessionStorage.setItem("token", d.token);
+      sessionStorage.setItem("usuario", d.usuario);
+      window.location.href = "index.html";
+    } else {
+      alert("Login inválido");
+      resetBtn();
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Erro ao conectar");
+    resetBtn();
+  });
 }
 
 function resetBtn() {
@@ -133,6 +145,7 @@ function resetBtn() {
   btn.disabled = false;
 }
 </script>
+
 
 </body>
 </html>
