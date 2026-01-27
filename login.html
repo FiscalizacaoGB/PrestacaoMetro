@@ -72,14 +72,6 @@ button.loading {
 button:hover:not(.loading) {
   background: #163a6b;
 }
-
-@media (max-width: 480px) {
-  .login-container {
-    margin: 0 12px;
-    padding: 28px 20px;
-  }
-  .logo img { max-width: 150px; }
-}
 </style>
 </head>
 
@@ -104,42 +96,34 @@ button:hover:not(.loading) {
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwNLew3HAVIDmJh6yM-GX9ki-EH4GOmwu1913czT-PvQa6wzlAg4_Bvn0kOhlmOyhc/exec";
 
-// 🔐 LIMPA SESSÃO APENAS SE VEIO DE LOGOUT
-if (sessionStorage.getItem("logout") === "1") {
-  sessionStorage.clear();
-  sessionStorage.removeItem("logout");
-}
-
 function login() {
   const btn = document.getElementById("btnLogin");
   btn.innerText = "Entrando...";
   btn.classList.add("loading");
   btn.disabled = true;
 
+  const formData = new FormData();
+  formData.append("acao", "login");
+  formData.append("usuario", usuario.value.trim());
+  formData.append("senha", senha.value);
+
   fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      acao: "login",
-      usuario: usuario.value.trim(),
-      senha: senha.value
-    })
+    body: formData
   })
   .then(r => r.json())
   .then(d => {
     if (d.status === "ok") {
-
       sessionStorage.setItem("token", d.token);
       sessionStorage.setItem("usuario", d.usuario);
-
       window.location.href = "index.html";
-
     } else {
       alert("Login inválido");
       resetBtn();
     }
   })
-  .catch(() => {
+  .catch(err => {
+    console.error(err);
     alert("Erro ao conectar");
     resetBtn();
   });
