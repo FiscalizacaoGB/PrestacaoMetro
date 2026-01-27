@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+
+<script>
+/* BLOQUEIO IMEDIATO */
+if (!sessionStorage.getItem("token")) {
+  window.location.replace("login.html");
+}
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumo de Linhas - Cidade Sol</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+/* HEADER */
+header {
+  background: #0b2545;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header img { height: 50px; }
+
+header button {
+  background: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* SECTION */
+section { padding: 20px; }
+
+/* CONTROLS */
+<div class="controls">
+  <input type="date" id="dataIni">
+  <input type="date" id="dataFim">
+  <input type="text" id="nome" placeholder="Nome ou inicial">
+  <button onclick="buscarPrestacoes()">Buscar</button>
+</div>
+
+/* CARDS */
+.cards-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.card {
+  background: #fff;
+  border-left: 5px solid #0b2545;
+  padding: 12px;
+  border-radius: 8px;
+}
+.card span.label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+}
+.card span.valor {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0b2545;
+}
+
+/* TABLE */
+<table>
+<thead>
+<tr>
+  <th>Dia trabalhado</th>
+  <th>Nome</th>
+  <th>Matrícula</th>
+  <th>Status</th>
+  <th>Responsável</th>
+  <th>Ação</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .cards-resumo { grid-template-columns: 1fr 1fr; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+@media (max-width: 480px) {
+  .cards-resumo { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <img src="logo.png" alt="Cidade Sol">
+  <button onclick="logout()">Sair</button>
+</header>
+
+<section>
+<h2>Resumo de Linhas</h2>
+
+<!-- CARDS (OCULTOS INICIALMENTE) -->
+<div id="cardsContainer" style="display:none;">
+  <div class="cards-resumo">
+    <div class="card" id="cardTarifaBox">
+      <span class="label">Tarifa Total</span>
+      <span class="valor" id="cardTarifa">R$ 0,00</span>
+    </div>
+
+    <div class="card" id="cardSeguroBox">
+      <span class="label">Seguro Total</span>
+      <span class="valor" id="cardSeguro">R$ 0,00</span>
+    </div>
+
+    <div class="card">
+      <span class="label">Receita Total</span>
+      <span class="valor" id="cardReceita">R$ 0,00</span>
+    </div>
+
+    <div class="card">
+      <span class="label">KM Rodado</span>
+      <span class="valor" id="cardKm">0</span>
+    </div>
+
+    <div class="card">
+      <span class="label">Pax</span>
+      <span class="valor" id="cardPax">0</span>
+    </div>
+
+    <div class="card">
+      <span class="label">R$/KM Médio</span>
+      <span class="valor" id="cardRkm">0,00</span>
+    </div>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="controls">
+  <select id="ano">
+    <option value="">Ano</option>
+    <option value="2024">2024</option>
+    <option value="2025">2025</option>
+    <option value="2026">2026</option>
+  </select>
+
+  <select id="mes">
+    <option value="">Mês</option>
+    <option value="1">Janeiro</option>
+    <option value="2">Fevereiro</option>
+    <option value="3">Março</option>
+    <option value="4">Abril</option>
+    <option value="5">Maio</option>
+    <option value="6">Junho</option>
+    <option value="7">Julho</option>
+    <option value="8">Agosto</option>
+    <option value="9">Setembro</option>
+    <option value="10">Outubro</option>
+    <option value="11">Novembro</option>
+    <option value="12">Dezembro</option>
+  </select>
+
+  <select id="grupo">
+    <option value="todos">Todos</option>
+    <option>Grupo Alagoinhas</option>
+    <option>Grupo Recôncavo</option>
+    <option>Grupo Regional</option>
+  </select>
+
+  <label>
+    <input type="checkbox" id="somarSeguro"> Tarifa + Seguro
+  </label>
+
+  <button onclick="buscarLinhas()">Buscar</button>
+</div>
+
+<table>
+<thead>
+<tr>
+  <th>Linha</th>
+  <th>Receita</th>
+  <th id="thSeguro">Seguro</th>
+  <th>KM</th>
+  <th>Pax</th>
+  <th>R$/KM</th>
+  <th>Δ R$/KM</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</section>
+
+<script>
+const AUTH_API = "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2AZm7c-AYI2FiM926hvbr4QSpW_CBpIwv8xP0DRJbse6Zb/exec";
+
+fetch(AUTH_API, {
+  method: "POST",
+  body: JSON.stringify({
+    acao: "validar",
+    token: sessionStorage.getItem("token")
+  })
+})
+.then(r => r.json())
+.then(d => {
+  if (d.status !== "ok") logout();
+})
+.catch(logout);
+
+function logout() {
+  sessionStorage.clear();
+  window.location.href = "login.html";
+}
+</script>
+
+<script>
+const URL_PRESTACAO = "https://script.google.com/macros/s/AKfycbwdnjssx10s3SMYVt5X2R_Pk1Njlman6QSd_GG0ri-qKVIEuPT_vvv4sY3ntTj9CHlF/exec";
+
+function moeda(v){ return Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function decimal(v){ return Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function soma(arr,c){ return arr.reduce((t,i)=>t+(Number(i[c])||0),0); }
+
+async function buscarPrestacoes() {
+  const dataIni = document.getElementById("dataIni").value;
+  const dataFim = document.getElementById("dataFim").value;
+  const nome = document.getElementById("nome").value;
+
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
+
+  const res = await fetch(URL_PRESTACAO, {
+    method: "POST",
+    body: JSON.stringify({
+      acao: "buscar",
+      dataIni,
+      dataFim,
+      nome
+    })
+  });
+
+  const dados = await res.json();
+  tbody.innerHTML = "";
+
+  if (dados.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>Nenhum registro encontrado</td></tr>";
+    return;
+  }
+
+  dados.forEach(d => {
+    tbody.innerHTML += `
+<tr>
+  <td>${d.dia}</td>
+  <td>${d.nome}</td>
+  <td>${d.matricula}</td>
+  <td class="${d.status === "Pendente" ? "negativo" : "positivo"}">${d.status}</td>
+  <td>${d.responsavel || "-"}</td>
+  <td>
+    ${d.status === "Pendente"
+      ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
+      : "-"}
+  </td>
+</tr>`;
+  });
+}
+
+  async function darBaixa(linha) {
+  if (!confirm("Confirma dar baixa nesta prestação?")) return;
+
+  const usuario = sessionStorage.getItem("usuario");
+
+  await fetch(URL_PRESTACAO, {
+    method: "POST",
+    body: JSON.stringify({
+      acao: "baixa",
+      linha,
+      usuario
+    })
+  });
+
+  buscarPrestacoes();
+}
+
+
+  /* ===== SOMATÓRIOS ===== */
+  const totalTarifa = soma(atual, "Tarifa");
+  const totalSeguro = soma(atual, "Seguro");
+  const receitaTotal = totalTarifa + totalSeguro;
+  const totalKm = soma(atual, "Km_Rodado");
+  const totalPax = soma(atual, "Qtd_Pax");
+  const rkmMedio = totalKm ? receitaTotal / totalKm : 0;
+
+  /* ===== VISIBILIDADE ===== */
+  document.getElementById("cardTarifaBox").style.display =
+    somarSeguroSel ? "none" : "block";
+  document.getElementById("cardSeguroBox").style.display =
+    somarSeguroSel ? "none" : "block";
+  thSeguro.style.display = somarSeguroSel ? "none" : "table-cell";
+
+  /* ===== ATUALIZA CARDS ===== */
+  cardTarifa.innerText = moeda(totalTarifa);
+  cardSeguro.innerText = moeda(totalSeguro);
+  cardReceita.innerText = moeda(receitaTotal);
+  cardKm.innerText = decimal(totalKm);
+  cardPax.innerText = decimal(totalPax);
+  cardRkm.innerText = decimal(rkmMedio);
+
+  /* ===== TABELA ===== */
+  tbody.innerHTML = "";
+
+  atual.forEach(l => {
+    const receitaLinha = somarSeguroSel
+      ? Number(l.Tarifa) + Number(l.Seguro)
+      : Number(l.Tarifa);
+
+    tbody.innerHTML += `
+<tr>
+  <td>${l.Linha}</td>
+  <td>${moeda(receitaLinha)}</td>
+  ${somarSeguroSel ? "" : `<td>${moeda(l.Seguro)}</td>`}
+  <td>${decimal(l.Km_Rodado)}</td>
+  <td>${decimal(l.Qtd_Pax)}</td>
+  <td>${decimal(l["R$/KM"])}</td>
+  <td>-</td>
+</tr>`;
+  });
+}
+
+</script>
+
+</body>
+</html>
