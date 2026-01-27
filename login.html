@@ -81,11 +81,6 @@ button:hover:not(.loading) {
   .logo img { max-width: 150px; }
 }
 </style>
-
-<script>
-/* LIMPA SESSÃO AO ABRIR LOGIN */
-sessionStorage.clear();
-</script>
 </head>
 
 <body>
@@ -109,6 +104,12 @@ sessionStorage.clear();
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2AZm7c-AYI2FiM926hvbr4QSpW_CBpIwv8xP0DRJbse6Zb/exec";
 
+// 🔐 LIMPA SESSÃO APENAS SE VEIO DE LOGOUT
+if (sessionStorage.getItem("logout") === "1") {
+  sessionStorage.clear();
+  sessionStorage.removeItem("logout");
+}
+
 function login() {
   const btn = document.getElementById("btnLogin");
   btn.innerText = "Entrando...";
@@ -117,7 +118,7 @@ function login() {
 
   fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },   // ✅ IMPORTANTE
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       acao: "login",
       usuario: usuario.value.trim(),
@@ -128,11 +129,9 @@ function login() {
   .then(d => {
     if (d.status === "ok") {
 
-      // 🔑 SALVA TOKEN E USUÁRIO (CRÍTICO)
       sessionStorage.setItem("token", d.token);
       sessionStorage.setItem("usuario", d.usuario);
 
-      // 🚀 REDIRECIONA
       window.location.href = "index.html";
 
     } else {
