@@ -116,26 +116,28 @@ function login() {
   formData.append("usuario", usuario);
   formData.append("senha", senha);
 
-  fetch(API_URL, {
-    method: "POST",
-    body: formData
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.status === "ok") {
-      sessionStorage.setItem("token", d.token);
-      sessionStorage.setItem("usuario", d.usuario);
-      window.location.href = "index.html";
-    } else {
-      alert("Login inválido");
-      resetBtn();
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Erro ao conectar");
+fetch(API_URL, {
+  method: "POST",
+  body: formData
+})
+.then(r => r.text())
+.then(t => {
+  const d = JSON.parse(t);
+
+  if (d.status === "ok") {
+    sessionStorage.setItem("token", d.token);
+    sessionStorage.setItem("usuario", d.usuario);
+    window.location.href = "index.html";
+  } else {
+    alert("Login inválido");
     resetBtn();
-  });
+  }
+})
+.catch(err => {
+  console.error("Erro real:", err);
+  alert("Erro ao conectar");
+  resetBtn();
+});
 }
 
 function resetBtn() {
