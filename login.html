@@ -94,39 +94,36 @@ button:hover:not(.loading) {
 
 <script>
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwNLew3HAVIDmJh6yM-GX9ki-EH4GOmwu1913czT-PvQa6wzlAg4_Bvn0kOhlmOyhc/exec";
+  "https://script.google.com/macros/s/AKfycbz1Vbr1SYPLFh8mzCQzpQ1aTaUt_TfXrcrLY20y_6fqFc7rTVxEk9HMuAr407uS-NcY/exec";
 
-function login() {
-  const btn = document.getElementById("btnLogin");
-  btn.innerText = "Entrando...";
-  btn.classList.add("loading");
-  btn.disabled = true;
+function processarLogin(usuario, senha) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA);
+  const rows = sheet.getDataRange().getValues();
 
-  const formData = new FormData();
-  formData.append("acao", "login");
-  formData.append("usuario", usuario.value.trim());
-  formData.append("senha", senha.value);
+  for (let i = 1; i < rows.length; i++) {
+    if (
+      String(rows[i][0]).trim().toLowerCase() ===
+      String(usuario).trim().toLowerCase()
+    ) {
 
-  fetch(API_URL, {
-    method: "POST",
-    body: formData
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.status === "ok") {
-      sessionStorage.setItem("token", d.token);
-      sessionStorage.setItem("usuario", d.usuario);
-      window.location.href = "index.html";
-    } else {
-      alert("Login inválido");
-      resetBtn();
+      const hashSalvo = String(rows[i][1]).trim();
+      const hashDigitado = gerarHash(senha);
+
+      if (hashDigitado === hashSalvo) {
+        const token = Utilities.getUuid();
+
+        CacheService.getScriptCache().put(token, usuario, SESSION_TIME);
+
+        return resposta({
+          status: "ok",
+          token: token,
+          usuario: usuario
+        });
+      }
     }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Erro ao conectar");
-    resetBtn();
-  });
+  }
+
+  return resposta({ status: "erro" });
 }
 
 function resetBtn() {
