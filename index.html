@@ -137,6 +137,7 @@ const AUTH_API = "https://script.google.com/macros/s/AKfycbwg-_UhoiovL7rz6NmncH2
 
 fetch(AUTH_API, {
   method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     acao: "validar",
     token: sessionStorage.getItem("token")
@@ -156,7 +157,8 @@ function logout() {
 
 <!-- PRESTAÇÃO DE CONTAS -->
 <script>
-const URL_PRESTACAO = "https://script.google.com/macros/s/AKfycby6T_Ebamm5E8u7QxVCqN744634QFEl6j8vCiaftHMjvjCgt5v2l_J9ZbzgCtwN1v50/exec;"
+const URL_PRESTACAO =
+  "https://script.google.com/macros/s/AKfycbyi2tiOq3IYV--j15IIPB-KqQKL0S6XC4qgcig2ZgQFoLmAP0wenivNOM3f6LjaXrdW/exec";
 
 async function buscarPrestacoes() {
   const dataIni = document.getElementById("dataIni").value;
@@ -173,6 +175,7 @@ async function buscarPrestacoes() {
 
   const res = await fetch(URL_PRESTACAO, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       acao: "buscar",
       dataIni,
@@ -200,9 +203,11 @@ async function buscarPrestacoes() {
         </td>
         <td>${d.responsavel || "-"}</td>
         <td>
-          ${d.status === "Pendente"
-            ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
-            : "-"}
+          ${
+            d.status === "Pendente"
+              ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
+              : "-"
+          }
         </td>
       </tr>
     `;
@@ -216,6 +221,7 @@ async function darBaixa(linha) {
 
   await fetch(URL_PRESTACAO, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       acao: "baixa",
       linha,
