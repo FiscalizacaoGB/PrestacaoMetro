@@ -145,16 +145,20 @@ fetch(AUTH_API, {
 })
 .then(r => r.json())
 .then(d => {
-  if (d.status !== "ok") logout();
+  if (d.status !== "ok") {
+    logout();
+  }
 })
-.catch(logout);
+.catch(err => {
+  console.error("Falha na validação:", err);
+  logout();
+});
 
 function logout() {
   sessionStorage.setItem("logout", "1");
   sessionStorage.clear();
   window.location.href = "login.html";
 }
-
 </script>
 
 <!-- PRESTAÇÃO DE CONTAS -->
