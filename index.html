@@ -2,6 +2,13 @@
 <html lang="pt-br">
 <head>
 
+<!-- BLOQUEIO IMEDIATO -->
+<script>
+if (!sessionStorage.getItem("token")) {
+  window.location.replace("login.html");
+}
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prestação de Contas - Linhas Metropolitanas</title>
@@ -13,7 +20,6 @@ body {
   background: #f4f6f8;
 }
 
-/* HEADER */
 header {
   background: #0b2545;
   padding: 10px 20px;
@@ -31,12 +37,10 @@ header button {
   cursor: pointer;
 }
 
-/* SECTION */
 section {
   padding: 20px;
 }
 
-/* CONTROLS */
 .controls {
   margin-bottom: 20px;
   display: flex;
@@ -49,7 +53,6 @@ section {
   font-size: 14px;
 }
 
-/* TABLE */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -61,28 +64,10 @@ th, td {
   font-size: 14px;
   text-align: center;
 }
-th {
-  background: #eee;
-}
+th { background: #eee; }
 
-/* STATUS */
-.positivo {
-  color: green;
-  font-weight: bold;
-}
-.negativo {
-  color: red;
-  font-weight: bold;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-}
+.positivo { color: green; font-weight: bold; }
+.negativo { color: red; font-weight: bold; }
 </style>
 </head>
 
@@ -115,25 +100,23 @@ th {
       </tr>
     </thead>
     <tbody id="tbodyPrestacao">
-      <tr>
-        <td colspan="6">Carregando…</td>
-      </tr>
+      <tr><td colspan="6">Informe os filtros e clique em Buscar</td></tr>
     </tbody>
   </table>
 </section>
 
-<!-- AUTENTICAÇÃO (ÚNICO CONTROLE DE SESSÃO) -->
+<!-- VALIDA TOKEN -->
 <script>
 const AUTH_API =
   "https://script.google.com/macros/s/AKfycbwNLew3HAVIDmJh6yM-GX9ki-EH4GOmwu1913czT-PvQa6wzlAg4_Bvn0kOhlmOyhc/exec";
 
+const authForm = new FormData();
+authForm.append("acao", "validar");
+authForm.append("token", sessionStorage.getItem("token"));
+
 fetch(AUTH_API, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    acao: "validar",
-    token: sessionStorage.getItem("token")
-  })
+  body: authForm
 })
 .then(r => r.json())
 .then(d => {
@@ -142,18 +125,77 @@ fetch(AUTH_API, {
 .catch(() => logout());
 
 function logout() {
-  sessionStorage.setItem("logout", "1");
   sessionStorage.clear();
   window.location.href = "login.html";
 }
 </script>
 
-<!-- PRESTAÇÃO DE CONTAS -->
+<!-- PRESTAÇÃO -->
 <script>
 const URL_PRESTACAO =
   "https://script.google.com/macros/s/AKfycbxl0sD2be2zP5aLRXReLnkJFrEkzo-mEiJGHxkoH0Q3Qqxq76yphI0e94VktuZNf9H8/exec";
 
-/* buscarPrestacoes() e darBaixa() permanecem exatamente como você enviou */
+async function buscarPrestacoes() {
+  const dataIni = dataIni.value;
+  const dataFim = dataFim.value;
+  const nome = nome.value;
+
+  if (!dataIni || !dataFim) {
+    alert("Informe o período de datas.");
+    return;
+  }
+
+  const tbody = document.getElementById("tbodyPrestacao");
+  tbody.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
+
+  const form = new FormData();
+  form.append("acao", "buscar");
+  form.append("dataIni", dataIni);
+  form.append("dataFim", dataFim);
+  form.append("nome", nome);
+
+  const res = await fetch(URL_PRESTACAO, {
+    method: "POST",
+    body: form
+  });
+
+  const dados = await res.json();
+  tbody.innerHTML = "";
+
+  if (!dados.length) {
+    tbody.innerHTML = "<tr><td colspan='6'>Nenhum registro encontrado</td></tr>";
+    return;
+  }
+
+  dados.forEach(d => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${d.dia}</td>
+        <td>${d.nome}</td>
+        <td>${d.matricula}</td>
+        <td class="${d.status === "Pendente" ? "negativo" : "positivo"}">${d.status}</td>
+        <td>${d.responsavel || "-"}</td>
+        <td>${d.status === "Pendente" ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>` : "-"}</td>
+      </tr>
+    `;
+  });
+}
+
+async function darBaixa(linha) {
+  if (!confirm("Confirma dar baixa nesta prestação?")) return;
+
+  const form = new FormData();
+  form.append("acao", "baixa");
+  form.append("linha", linha);
+  form.append("usuario", sessionStorage.getItem("usuario") || "Sistema");
+
+  await fetch(URL_PRESTACAO, {
+    method: "POST",
+    body: form
+  });
+
+  buscarPrestacoes();
+}
 </script>
 
 </body>
