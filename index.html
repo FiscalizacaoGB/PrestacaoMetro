@@ -29,9 +29,7 @@ header button {
   cursor: pointer;
 }
 
-section {
-  padding: 20px;
-}
+section { padding: 20px; }
 
 .controls {
   margin-bottom: 20px;
@@ -60,6 +58,31 @@ th { background: #eee; }
 
 .positivo { color: green; font-weight: bold; }
 .negativo { color: red; font-weight: bold; }
+
+/* ===== LOADING REAL ===== */
+button.loading {
+  background: #9ca3af;
+  cursor: not-allowed;
+  position: relative;
+}
+
+button.loading::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg) translateY(-50%); }
+}
 </style>
 </head>
 
@@ -97,32 +120,22 @@ th { background: #eee; }
   </table>
 </section>
 
-<!-- 🔐 VALIDA TOKEN (FORMA CORRETA) -->
+<!-- 🔐 VALIDA TOKEN -->
 <script>
 const AUTH_API =
   "https://script.google.com/macros/s/AKfycbz0eJCrwR_UeYnyd2Lxj--wLpx-Hn8ssppmkyuU4E4Kqo8Zey0Zgmc522ZaHyaUYTGb/exec";
 
 const token = sessionStorage.getItem("token");
-
-// Se não existir token, sai
-if (!token) {
-  window.location.href = "login.html";
-}
+if (!token) window.location.href = "login.html";
 
 const authForm = new FormData();
 authForm.append("acao", "validar");
 authForm.append("token", token);
 
-fetch(AUTH_API, {
-  method: "POST",
-  body: authForm
-})
-.then(r => r.text())
-.then(t => {
-  const d = JSON.parse(t);
-  if (d.status !== "ok") logout();
-})
-.catch(() => logout());
+fetch(AUTH_API, { method: "POST", body: authForm })
+  .then(r => r.json())
+  .then(d => { if (d.status !== "ok") logout(); })
+  .catch(logout);
 
 function logout() {
   sessionStorage.clear();
@@ -136,9 +149,9 @@ const URL_PRESTACAO =
   "https://script.google.com/macros/s/AKfycbxBRQ_ShTTlCoPCg6CfmxoQHSE9CkpHLI5QTDdI-MWPWboYM82zmuuVC2_RgkL0ywQF/exec";
 
 async function buscarPrestacoes() {
-  const dataIni = document.getElementById("dataIni").value;
-  const dataFim = document.getElementById("dataFim").value;
-  const nome = document.getElementById("nome").value;
+  const dataIni = dataIniInput().value;
+  const dataFim = dataFimInput().value;
+  const nome = nomeInput().value;
 
   if (!dataIni || !dataFim) {
     alert("Informe o período de datas.");
@@ -154,12 +167,9 @@ async function buscarPrestacoes() {
   form.append("dataFim", dataFim);
   form.append("nome", nome);
 
-  const res = await fetch(URL_PRESTACAO, {
-    method: "POST",
-    body: form
-  });
-
+  const res = await fetch(URL_PRESTACAO, { method: "POST", body: form });
   const dados = await res.json();
+
   tbody.innerHTML = "";
 
   if (!dados || !dados.length) {
@@ -173,35 +183,61 @@ async function buscarPrestacoes() {
         <td>${d.dia}</td>
         <td>${d.nome}</td>
         <td>${d.matricula}</td>
-        <td class="${d.status === "Pendente" ? "negativo" : "positivo"}">
-          ${d.status}
-        </td>
+        <td class="${d.status === "Pendente" ? "negativo" : "positivo"}">${d.status}</td>
         <td>${d.responsavel || "-"}</td>
         <td>
           ${d.status === "Pendente"
-            ? `<button onclick="darBaixa(${d.linha})">Dar baixa</button>`
-            : "-"}
+            ? `<button id="btn-${d.linha}" onclick="darBaixa(${d.linha}, this)">Dar baixa</button>`
+            : `<span class="positivo">Pago</span>`}
         </td>
       </tr>
     `;
   });
 }
 
-async function darBaixa(linha) {
+/* ===== DAR BAIXA COM TRAVA + LOADING ===== */
+async function darBaixa(linha, btn) {
   if (!confirm("Confirma dar baixa nesta prestação?")) return;
+
+  btn.disabled = true;
+  btn.classList.add("loading");
+  btn.innerText = "Processando";
 
   const form = new FormData();
   form.append("acao", "baixa");
   form.append("linha", linha);
   form.append("usuario", sessionStorage.getItem("usuario") || "Sistema");
 
-  await fetch(URL_PRESTACAO, {
-    method: "POST",
-    body: form
-  });
+  try {
+    const res = await fetch(URL_PRESTACAO, { method: "POST", body: form });
+    const data = await res.json();
 
-  buscarPrestacoes();
+    if (data.status === "ok") {
+      btn.classList.remove("loading");
+      btn.disabled = true;
+      btn.innerText = "Pago";
+      btn.classList.add("positivo");
+    } else {
+      liberarBotao(btn);
+      alert("Erro ao dar baixa");
+    }
+
+  } catch {
+    liberarBotao(btn);
+    alert("Falha na comunicação");
+  }
 }
+
+function liberarBotao(btn) {
+  btn.disabled = false;
+  btn.classList.remove("loading");
+  btn.innerText = "Dar baixa";
+}
+
+/* ===== HELPERS ===== */
+function dataIniInput() { return document.getElementById("dataIni"); }
+function dataFimInput() { return document.getElementById("dataFim"); }
+function nomeInput() { return document.getElementById("nome"); }
 </script>
 
 </body>
